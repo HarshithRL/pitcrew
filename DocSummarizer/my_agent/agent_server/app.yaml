@@ -1,0 +1,18 @@
+command:
+  - python
+  - start_server.py
+env:
+  - name: MLFLOW_TRACKING_URI
+    value: "databricks"
+  - name: AGENT_ENV
+    value: "Dev"
+  - name: "MLFLOW_TRACING_SQL_WAREHOUSE_ID"
+    value: "1037c4b4b3efb4b4"
+  # The mlflow-experiment resource is bound in the App config UI OR by DAB (section 12).
+  # Make sure the App service principal has CAN_MANAGE on the experiment.
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: mlflow-experiment
+  - name: MLFLOW_EXPERIMENT_NAME
+    value: "/Users/harshith.r@diggibyte.com/document-summarizer"
+  - name: LLM_ENDPOINT_NAME
+    value: "databricks-claude-sonnet-4-5"

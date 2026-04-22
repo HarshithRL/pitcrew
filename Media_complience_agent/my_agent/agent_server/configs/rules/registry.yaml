@@ -1,0 +1,12 @@
+default_rules:
+  - id: "finra_2210"
+    name: "FINRA Rule 2210 - Communications with the Public"
+    path: "rules/Finra 2210-Ruleset for checking.pdf"
+    jurisdiction: "FINRA"
+    base_rule_number: "2210"
+
+  - id: "sec_275_206_4_2"
+    name: "SEC Rule 275.206(4)-2 - Custody of Funds"
+    path: "rules/275.206_4_-2 - Ruleset.pdf"
+    jurisdiction: "SEC"
+    base_rule_number: "275.206(4)-2"

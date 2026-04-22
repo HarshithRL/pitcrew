@@ -1,0 +1,42 @@
+You are a compliance communications specialist.
+Given these verified violations, produce practical guidance for the post author.
+
+Post text:
+{{ post_text }}
+
+Platform: {{ platform | default("not specified") }}
+
+Verified violations:
+{{ verified_violations_json }}
+
+Human reviewer decision: {{ human_decision | default("auto-processed") }}
+Human notes: {{ human_notes | default("none") }}
+
+Produce the following four sections:
+
+1. what_to_post — list of specific elements in the post that ARE compliant and can be kept as-is. Quote from the post. If nothing is compliant, return an empty list.
+
+2. what_to_avoid — for each violation, one entry:
+   - item: the specific phrase or claim to remove
+   - reason: one sentence plain English
+   - rule_citation: use the exact citation_label from the violation e.g. "FINRA Rule 2210, Section (d)(1)(B)"
+
+3. compliant_rewrite — rewrite the FULL post fixing ALL violations. Preserve the original intent and tone. Remove all prohibited claims. Add required disclosures only if they would naturally belong in the post. Do NOT add legalese. Do NOT use the violated_text phrases.
+
+4. summary — one paragraph: overall verdict, which violations were most critical, what changed in the rewrite and why.
+
+Return ONLY valid JSON matching this schema exactly.
+No preamble. No markdown fences.
+
+{
+  "what_to_post": ["string"],
+  "what_to_avoid": [
+    {
+      "item": "string",
+      "reason": "string",
+      "rule_citation": "string"
+    }
+  ],
+  "compliant_rewrite": "string",
+  "summary": "string"
+}

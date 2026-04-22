@@ -1,0 +1,16 @@
+[
+  {
+    "post_text": "Interested in learning about diversified portfolio strategies? We offer educational resources on risk management and long-term investing. Past performance does not guarantee future results.",
+    "platform": "linkedin",
+    "expected_violations": [],
+    "expected_tier": "auto_approve",
+    "notes": "Educational, includes required disclaimer"
+  },
+  {
+    "post_text": "Our advisors are registered with FINRA. We help clients build balanced portfolios aligned with their risk tolerance and financial goals. Investment involves risk.",
+    "platform": "linkedin",
+    "expected_violations": [],
+    "expected_tier": "auto_approve",
+    "notes": "Factual, no guarantees, no performance claims"
+  }
+]

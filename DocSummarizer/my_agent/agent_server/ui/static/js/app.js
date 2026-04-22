@@ -1,0 +1,245 @@
+/* Document Summarizer UI.
+ *
+ * Flow:
+ *   1. User picks a document file (.txt, .md, .pdf).
+ *   2. Form submits multipart/form-data to /ui/summarize.
+ *   3. Server saves the file, invokes the LangGraph summarizer, returns JSON
+ *      containing both the extracted raw text and the final summary.
+ *   4. We render each as markdown in its own tab.
+ *   5. The "Download .md" button saves the raw markdown of the active tab.
+ */
+
+(() => {
+  const form = document.getElementById("upload-form");
+  const fileInput = document.getElementById("document");
+  const fileName = document.getElementById("file-name");
+  const submitBtn = document.getElementById("submit");
+  const statusEl = document.getElementById("status");
+  const resultEl = document.getElementById("result");
+  const resultFilename = document.getElementById("result-filename");
+  const resultMeta = document.getElementById("result-meta");
+  const panelSummary = document.getElementById("panel-summary");
+  const panelExtracted = document.getElementById("panel-extracted");
+  const downloadBtn = document.getElementById("download-md");
+  const tabs = document.querySelectorAll(".tab");
+  const feedbackEl = document.getElementById("feedback");
+  const feedbackBtns = feedbackEl.querySelectorAll(".feedback-btn");
+  const feedbackCommentForm = document.getElementById("feedback-comment-form");
+  const feedbackCommentInput = document.getElementById("feedback-comment");
+  const feedbackSkipBtn = document.getElementById("feedback-skip");
+  const feedbackMsg = document.getElementById("feedback-msg");
+
+  // Raw markdown for each tab is cached here so the download button can grab
+  // it without re-parsing the rendered HTML.
+  const rawMarkdown = {
+    "panel-summary": "",
+    "panel-extracted": "",
+  };
+  let activePanel = "panel-summary";
+  let sourceFilename = "";
+  let currentTraceId = "";
+  let pendingIsHelpful = null;
+
+  function show(el) { el.hidden = false; }
+  function hide(el) { el.hidden = true; }
+
+  function setStatus(kind, text) {
+    statusEl.className = `status ${kind}`;
+    statusEl.textContent = text;
+    show(statusEl);
+  }
+
+  function renderMarkdown(target, text) {
+    if (window.marked && typeof window.marked.parse === "function") {
+      target.innerHTML = window.marked.parse(text || "");
+    } else {
+      target.textContent = text || "";
+    }
+  }
+
+  function activateTab(tab) {
+    tabs.forEach((t) => {
+      const active = t === tab;
+      t.classList.toggle("active", active);
+      const panel = document.getElementById(t.dataset.panel);
+      if (!panel) return;
+      panel.classList.toggle("active", active);
+      if (active) {
+        show(panel);
+        activePanel = t.dataset.panel;
+      } else {
+        hide(panel);
+      }
+    });
+    updateDownloadLabel();
+  }
+
+  function updateDownloadLabel() {
+    const which = activePanel === "panel-summary" ? "summary" : "extracted";
+    downloadBtn.textContent = `\u2193 Download ${which}.md`;
+    downloadBtn.disabled = !rawMarkdown[activePanel];
+  }
+
+  function downloadActive() {
+    const md = rawMarkdown[activePanel];
+    if (!md) return;
+
+    const base = (sourceFilename || "document").replace(/\.[^.]+$/, "");
+    const suffix = activePanel === "panel-summary" ? "summary" : "extracted";
+    const outName = `${base}.${suffix}.md`;
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = outName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function resetFeedback() {
+    pendingIsHelpful = null;
+    feedbackCommentInput.value = "";
+    hide(feedbackCommentForm);
+    hide(feedbackMsg);
+    feedbackMsg.className = "feedback-msg";
+    feedbackMsg.textContent = "";
+    feedbackBtns.forEach((b) => {
+      b.classList.remove("selected");
+      b.disabled = false;
+    });
+  }
+
+  function setFeedbackMsg(kind, text) {
+    feedbackMsg.className = `feedback-msg ${kind}`;
+    feedbackMsg.textContent = text;
+    show(feedbackMsg);
+  }
+
+  async function submitFeedback(isHelpful, comment) {
+    if (!currentTraceId) {
+      setFeedbackMsg("error", "No trace id — feedback cannot be attached.");
+      return;
+    }
+    try {
+      const resp = await fetch("/ui/feedback", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trace_id: currentTraceId,
+          is_helpful: isHelpful,
+          comment: comment || "",
+        }),
+      });
+      const body = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(body.error || `HTTP ${resp.status}`);
+
+      feedbackBtns.forEach((b) => { b.disabled = true; });
+      hide(feedbackCommentForm);
+      setFeedbackMsg("ok", "Thanks for the feedback.");
+    } catch (err) {
+      console.error(err);
+      setFeedbackMsg("error", `Could not record feedback: ${err.message || err}`);
+      feedbackBtns.forEach((b) => { b.disabled = false; });
+    }
+  }
+
+  feedbackBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const value = btn.dataset.value === "up";
+      pendingIsHelpful = value;
+      feedbackBtns.forEach((b) => b.classList.toggle("selected", b === btn));
+      hide(feedbackMsg);
+
+      if (value) {
+        // Thumbs-up: submit immediately, no comment needed.
+        hide(feedbackCommentForm);
+        submitFeedback(true, "");
+      } else {
+        // Thumbs-down: show optional comment box before submitting.
+        show(feedbackCommentForm);
+        feedbackCommentInput.focus();
+      }
+    });
+  });
+
+  feedbackCommentForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (pendingIsHelpful === null) return;
+    submitFeedback(pendingIsHelpful, feedbackCommentInput.value.trim());
+  });
+
+  feedbackSkipBtn.addEventListener("click", () => {
+    if (pendingIsHelpful === null) return;
+    submitFeedback(pendingIsHelpful, "");
+  });
+
+  tabs.forEach((t) => t.addEventListener("click", () => activateTab(t)));
+  downloadBtn.addEventListener("click", downloadActive);
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0];
+    fileName.textContent = f ? f.name : "";
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+
+    hide(resultEl);
+    hide(feedbackEl);
+    resetFeedback();
+    setStatus("loading", `Summarizing ${file.name}…`);
+    submitBtn.disabled = true;
+
+    const body = new FormData();
+    body.append("document", file);
+
+    try {
+      const resp = await fetch("/ui/summarize", {
+        method: "POST",
+        credentials: "same-origin",
+        body,
+      });
+      const payload = await resp.json().catch(() => ({}));
+
+      if (!resp.ok) {
+        throw new Error(payload.error || `HTTP ${resp.status}`);
+      }
+
+      sourceFilename = payload.filename || file.name;
+      resultFilename.textContent = sourceFilename;
+      const meta = payload.metadata || {};
+      const bits = [];
+      if (meta.char_count) bits.push(`${meta.char_count.toLocaleString()} chars`);
+      if (payload.chunk_count) bits.push(`${payload.chunk_count} chunks`);
+      resultMeta.textContent = bits.join(" · ");
+
+      rawMarkdown["panel-summary"] = payload.summary || "";
+      rawMarkdown["panel-extracted"] = payload.extracted_text || "";
+
+      renderMarkdown(panelSummary, rawMarkdown["panel-summary"] || "_(no summary returned)_");
+      renderMarkdown(panelExtracted, rawMarkdown["panel-extracted"] || "_(no extracted text)_");
+
+      activateTab(document.querySelector('.tab[data-panel="panel-summary"]'));
+      show(resultEl);
+      hide(statusEl);
+
+      currentTraceId = payload.mlflow_trace_id || "";
+      if (currentTraceId) {
+        show(feedbackEl);
+      } else {
+        hide(feedbackEl);
+      }
+    } catch (err) {
+      console.error(err);
+      setStatus("error", `Error: ${err.message || err}`);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+})();

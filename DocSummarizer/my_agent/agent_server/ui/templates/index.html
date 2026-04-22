@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Document Summarizer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <strong>Document Summarizer</strong>
+      <span class="tag">upload &amp; summarize</span>
+    </div>
+    <div class="who">
+      {% if user_email %}
+        signed in as <code>{{ user_email }}</code>
+      {% else %}
+        <code>local dev</code>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="container">
+    <form id="upload-form" class="upload" enctype="multipart/form-data">
+      <label for="document" class="drop">
+        <span class="drop-title">Choose a document</span>
+        <span class="drop-hint">.txt, .md, .pdf &middot; up to 20&nbsp;MB</span>
+        <input id="document" name="document" type="file" accept=".txt,.md,.pdf" required />
+        <span id="file-name" class="file-name"></span>
+      </label>
+      <button id="submit" type="submit">Summarize</button>
+    </form>
+
+    <section id="status" class="status" hidden></section>
+
+    <section id="result" class="result" hidden>
+      <header class="result-header">
+        <h2 id="result-filename"></h2>
+        <span id="result-meta" class="result-meta"></span>
+      </header>
+
+      <div class="tabs-row">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-panel="panel-summary" role="tab">Summary</button>
+          <button type="button" class="tab" data-panel="panel-extracted" role="tab">Extracted content</button>
+        </div>
+        <button type="button" id="download-md" class="download-btn" title="Download active tab as Markdown">
+          &#8595; Download .md
+        </button>
+      </div>
+
+      <div id="panel-summary" class="panel markdown active" role="tabpanel"></div>
+      <div id="panel-extracted" class="panel markdown scroll" role="tabpanel" hidden></div>
+
+      <footer id="feedback" class="feedback" hidden>
+        <span class="feedback-label">Was this summary helpful?</span>
+        <div class="feedback-actions">
+          <button type="button" class="feedback-btn" data-value="up" title="Helpful">&#128077;</button>
+          <button type="button" class="feedback-btn" data-value="down" title="Not helpful">&#128078;</button>
+        </div>
+        <form id="feedback-comment-form" class="feedback-comment" hidden>
+          <textarea id="feedback-comment" rows="2" placeholder="What went wrong? (optional)"></textarea>
+          <div class="feedback-comment-actions">
+            <button type="button" id="feedback-skip" class="feedback-skip">Skip</button>
+            <button type="submit" id="feedback-submit" class="feedback-submit">Send</button>
+          </div>
+        </form>
+        <span id="feedback-msg" class="feedback-msg" hidden></span>
+      </footer>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

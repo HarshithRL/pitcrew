@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "required": ["verified_violations", "removed_rule_ids"],
+  "properties": {
+    "verified_violations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "citation_accuracy",
+          "explanation_clarity",
+          "overall_valid"
+        ],
+        "properties": {
+          "rule_id":             { "type": "string" },
+          "citation_accuracy":   { "type": "number", "minimum": 0, "maximum": 1 },
+          "explanation_clarity": { "type": "number", "minimum": 0, "maximum": 1 },
+          "overall_valid":       { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "removed_rule_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

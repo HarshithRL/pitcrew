@@ -1,0 +1,30 @@
+[
+  {
+    "post_text": "Our fund guarantees 15% annual returns every year. Past performance shows we have never lost money. Invest now before this opportunity closes.",
+    "platform": "linkedin",
+    "expected_violations": ["FINRA 2210(d)(1)(B)", "FINRA 2210(d)(1)(F)"],
+    "expected_tier": "auto_reject",
+    "notes": "Performance guarantee + projection — two critical violations"
+  },
+  {
+    "post_text": "Join our exclusive investment opportunity. Limited spots available. Our members always win and never experience losses.",
+    "platform": "twitter",
+    "expected_violations": ["FINRA 2210(d)(1)(A)", "FINRA 2210(d)(1)(B)"],
+    "expected_tier": "hitl",
+    "notes": "Misleading claims, no specific guarantee — likely medium risk"
+  },
+  {
+    "post_text": "Based on our track record, we predict the market will rise 20% next quarter. Our analysts guarantee this forecast is accurate.",
+    "platform": "linkedin",
+    "expected_violations": ["FINRA 2210(d)(1)(F)", "FINRA 2210(d)(1)(B)"],
+    "expected_tier": "auto_reject",
+    "notes": "Explicit market prediction + guarantee"
+  },
+  {
+    "post_text": "Client testimonial: John D. made $50,000 in 3 months using our strategy! Results like this are typical for our members.",
+    "platform": "facebook",
+    "expected_violations": ["FINRA 2210(d)(6)"],
+    "expected_tier": "hitl",
+    "notes": "Testimonial without required disclosures"
+  }
+]

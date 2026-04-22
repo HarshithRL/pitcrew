@@ -1,0 +1,25 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "rule_id",
+      "citation_label",
+      "rule_text",
+      "violated_text",
+      "explanation",
+      "severity",
+      "confidence"
+    ],
+    "properties": {
+      "rule_id":        { "type": "string", "minLength": 1 },
+      "citation_label": { "type": "string", "minLength": 1 },
+      "rule_text":      { "type": "string", "minLength": 10 },
+      "violated_text":  { "type": "string", "minLength": 1 },
+      "explanation":    { "type": "string", "minLength": 10 },
+      "severity":       { "enum": ["critical", "major", "minor"] },
+      "confidence":     { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "additionalProperties": false
+  }
+}

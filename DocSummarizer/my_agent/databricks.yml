@@ -1,0 +1,38 @@
+bundle:
+  name: summarizer-agent
+
+variables:
+  username:
+    default: "harshith.r@diggibyte.com"
+
+workspace:
+  host: https://dbc-6afb4d73-0485.cloud.databricks.com
+  profile: dbc-6afb4d73-0485
+
+resources:
+  apps:
+    summarizer-agent:
+      name: "document-summarizer"
+      description: "Skeleton supervisor+subagent LangGraph agent"
+      source_code_path: ./agent_server
+      resources:
+        - name: "mlflow-experiment"
+          description: "MLflow experiment for agent tracing"
+          experiment:
+            experiment_id: "4348770528290097"
+            permission: "CAN_MANAGE"
+      config:
+        command:
+          - python
+          - start_server.py
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "databricks"
+          - name: MLFLOW_EXPERIMENT_ID
+            value: "4348770528290097"
+          - name: MLFLOW_EXPERIMENT_NAME
+            value: /Users/${var.username}/document-summarizer
+          - name: AGENT_ENV
+            value: "Dev"
+          - name: LLM_ENDPOINT_NAME
+            value: "databricks-claude-sonnet-4-5"

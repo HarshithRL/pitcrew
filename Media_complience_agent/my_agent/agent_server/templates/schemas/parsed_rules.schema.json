@@ -1,0 +1,23 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "rule_id",
+      "section",
+      "rule_text",
+      "citation_label",
+      "is_prohibition",
+      "is_requirement"
+    ],
+    "properties": {
+      "rule_id":        { "type": "string", "minLength": 1 },
+      "section":        { "type": "string" },
+      "rule_text":      { "type": "string", "minLength": 10 },
+      "citation_label": { "type": "string", "minLength": 1 },
+      "is_prohibition": { "type": "boolean" },
+      "is_requirement": { "type": "boolean" }
+    },
+    "additionalProperties": false
+  }
+}

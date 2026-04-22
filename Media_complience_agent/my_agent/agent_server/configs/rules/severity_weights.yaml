@@ -1,0 +1,17 @@
+severity_weights:
+  critical: 1.0
+  major: 0.5
+  minor: 0.15
+  default: 0.15
+
+known_severities:
+  "FINRA 2210(d)(1)(B)": critical
+  "FINRA 2210(d)(1)(F)": critical
+  "FINRA 2210(d)(7)":    major
+  "FINRA 2210(d)(1)(A)": major
+  "FINRA 2210(d)(6)":    major
+  "FINRA 2210(d)(2)":    major
+  "FINRA 2210(d)(4)":    major
+  "FINRA 2210(d)(3)":    minor
+  "FINRA 2210(d)(1)(D)": minor
+  "SEC 275.206(4)-2(a)": critical

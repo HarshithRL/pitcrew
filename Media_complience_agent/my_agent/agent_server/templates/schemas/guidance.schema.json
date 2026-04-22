@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "required": [
+    "what_to_post",
+    "what_to_avoid",
+    "compliant_rewrite",
+    "summary"
+  ],
+  "properties": {
+    "what_to_post": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "what_to_avoid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "reason", "rule_citation"],
+        "properties": {
+          "item":          { "type": "string" },
+          "reason":        { "type": "string" },
+          "rule_citation": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "compliant_rewrite": { "type": "string", "minLength": 10 },
+    "summary":           { "type": "string", "minLength": 10 }
+  },
+  "additionalProperties": false
+}

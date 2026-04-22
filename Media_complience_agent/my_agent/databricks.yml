@@ -1,0 +1,41 @@
+bundle:
+  name: my_agent
+
+variables:
+  username:
+    default: "harshith.r@diggibyte.com"
+
+workspace:
+  host: https://dbc-6afb4d73-0485.cloud.databricks.com
+  profile: dbc-6afb4d73-0485
+
+resources:
+  apps:
+    media_compliance_agent:
+      name: "media-compliance-agent"
+      description: "FINRA/SEC social media compliance checker with HITL"
+      source_code_path: ./agent_server
+      resources:
+        - name: "mlflow-experiment"
+          description: "MLflow experiment for agent tracing"
+          experiment:
+            # Hardcoded — the experiment at /Users/<user>/Media-Compliance-Agent
+            # already exists in the workspace; bundle adopts it rather than
+            # attempting to recreate (which would collide on the name).
+            experiment_id: "2994082667344294"
+            permission: "CAN_MANAGE"
+      config:
+        command:
+          - python
+          - start_server.py
+        env:
+          - name: MLFLOW_TRACKING_URI
+            value: "databricks"
+          - name: MLFLOW_EXPERIMENT_ID
+            value: "2994082667344294"
+          - name: MLFLOW_EXPERIMENT_NAME
+            value: /Users/harshith.r@diggibyte.com/Media-Compliance-Agent
+          - name: AGENT_ENV
+            value: "Dev"
+          - name: LLM_ENDPOINT_NAME
+            value: "databricks-claude-opus-4-7"

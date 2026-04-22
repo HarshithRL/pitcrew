@@ -1,0 +1,16 @@
+command:
+  - python
+  - start_server.py
+env:
+  - name: MLFLOW_TRACKING_URI
+    value: "databricks"
+  - name: AGENT_ENV
+    value: "Dev"
+  # The mlflow-experiment resource is bound in the App config UI OR by DAB.
+  # Make sure the App service principal has CAN_MANAGE on the experiment.
+  - name: MLFLOW_EXPERIMENT_ID
+    valueFrom: mlflow-experiment
+  - name: MLFLOW_EXPERIMENT_NAME
+    value: "/Users/harshith.r@diggibyte.com/Media-Compliance-Agent"
+  - name: LLM_ENDPOINT_NAME
+    value: "databricks-claude-opus-4-7"

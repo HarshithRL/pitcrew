@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Compliance Agent</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+  .verdict-compliant { background: #dcfce7; border-left: 4px solid #16a34a; }
+  .verdict-non-compliant { background: #fee2e2; border-left: 4px solid #dc2626; }
+  .verdict-needs-review { background: #fef9c3; border-left: 4px solid #ca8a04; }
+  .badge-critical { background:#fee2e2; color:#991b1b; }
+  .badge-major { background:#ffedd5; color:#9a3412; }
+  .badge-minor { background:#fef9c3; color:#854d0e; }
+  .spinner { border:3px solid #e5e7eb; border-top:3px solid #2563eb;
+             border-radius:50%; width:24px; height:24px;
+             animation:spin 0.8s linear infinite; display:inline-block; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  details > summary { cursor:pointer; user-select:none; }
+  .copy-btn { cursor:pointer; font-size:0.75rem; padding:2px 8px;
+              background:#e5e7eb; border-radius:4px; }
+  .copy-btn:hover { background:#d1d5db; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<div class="max-w-4xl mx-auto px-4 py-8">
+
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-bold text-gray-900">
+      Media Compliance Agent
+    </h1>
+    <p class="text-gray-500 text-sm mt-1">
+      FINRA / SEC Social Media Compliance Checker
+    </p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex border-b border-gray-200 mb-6">
+    <button id="tab-user" onclick="switchTab('user')"
+      class="px-6 py-3 text-sm tab-active">
+      Check Post
+    </button>
+    <button id="tab-admin" onclick="switchTab('admin')"
+      class="px-6 py-3 text-sm text-gray-500 hover:text-gray-700">
+      Manage Rules
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- USER TAB                                        -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div id="pane-user">
+
+    <!-- Upload form -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="font-semibold text-gray-800 mb-4">
+        Upload Social Media Post
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">
+            Post document (PDF or DOCX)
+          </label>
+          <input type="file" id="post-file" accept=".pdf,.docx"
+            class="block w-full text-sm text-gray-600 border
+                   border-gray-300 rounded p-2"/>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">
+            Platform (optional)
+          </label>
+          <select id="post-platform"
+            class="block w-full text-sm border border-gray-300
+                   rounded p-2 bg-white text-gray-700">
+            <option value="">Not specified</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="twitter">Twitter / X</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+          </select>
+        </div>
+        <button onclick="checkCompliance()"
+          class="bg-blue-600 text-white px-6 py-2 rounded
+                 text-sm font-medium hover:bg-blue-700">
+          Check Compliance
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="user-loading" class="hidden text-center py-6">
+      <div class="spinner mx-auto mb-3"></div>
+      <p id="loading-msg" class="text-gray-500 text-sm">
+        Uploading post...
+      </p>
+    </div>
+
+    <!-- Results -->
+    <div id="user-results" class="hidden space-y-4">
+
+      <!-- Verdict banner -->
+      <div id="verdict-banner"
+        class="p-4 rounded-lg flex items-center justify-between">
+        <div>
+          <p id="verdict-text" class="font-semibold text-lg"></p>
+          <p id="verdict-sub" class="text-sm mt-1"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-gray-500">Risk score</p>
+          <p id="risk-score-display"
+            class="text-2xl font-bold"></p>
+        </div>
+      </div>
+
+      <!-- HITL panel -->
+      <div id="hitl-panel" class="hidden bg-yellow-50 border
+           border-yellow-300 rounded-lg p-5">
+        <h3 class="font-semibold text-yellow-800 mb-2">
+          &#9888; Human Review Required
+        </h3>
+        <p class="text-sm text-yellow-700 mb-4">
+          This post has ambiguous compliance risk and requires
+          a compliance officer to review before a final decision.
+        </p>
+        <div class="space-y-3">
+          <textarea id="hitl-notes" rows="3"
+            placeholder="Reviewer notes (optional)..."
+            class="w-full text-sm border border-yellow-300
+                   rounded p-2 bg-white"></textarea>
+          <div class="flex gap-2">
+            <button onclick="submitHITL('approved')"
+              class="bg-green-600 text-white px-4 py-2 rounded
+                     text-sm hover:bg-green-700">
+              Approve
+            </button>
+            <button onclick="submitHITL('rejected')"
+              class="bg-red-600 text-white px-4 py-2 rounded
+                     text-sm hover:bg-red-700">
+              Reject
+            </button>
+            <button onclick="submitHITL('edit_requested')"
+              class="bg-gray-500 text-white px-4 py-2 rounded
+                     text-sm hover:bg-gray-600">
+              Request Edit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Violations panel -->
+      <div id="violations-panel" class="hidden">
+        <h3 class="font-semibold text-gray-800 mb-3">
+          Violations Found
+        </h3>
+        <div id="violations-list" class="space-y-3"></div>
+      </div>
+
+      <!-- Guidance panel -->
+      <div id="guidance-panel" class="hidden space-y-4">
+
+        <!-- What to keep -->
+        <div class="bg-green-50 border border-green-200
+                    rounded-lg p-4">
+          <h4 class="font-semibold text-green-800 mb-2">
+            &#10003; What to keep
+          </h4>
+          <ul id="what-to-post"
+            class="list-disc list-inside text-sm
+                   text-green-800 space-y-1"></ul>
+        </div>
+
+        <!-- What to remove -->
+        <div class="bg-red-50 border border-red-200
+                    rounded-lg p-4">
+          <h4 class="font-semibold text-red-800 mb-2">
+            &#10007; What to remove
+          </h4>
+          <ul id="what-to-avoid"
+            class="space-y-2 text-sm text-red-800"></ul>
+        </div>
+
+        <!-- Compliant rewrite -->
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-semibold text-gray-800">
+              Compliant rewrite
+            </h4>
+            <button class="copy-btn"
+              onclick="copyRewrite()">Copy</button>
+          </div>
+          <p id="compliant-rewrite"
+            class="text-sm text-gray-700 whitespace-pre-wrap
+                   bg-gray-50 rounded p-3"></p>
+        </div>
+
+        <!-- Summary -->
+        <div class="bg-gray-50 border border-gray-200
+                    rounded-lg p-4">
+          <h4 class="font-semibold text-gray-700 mb-1">
+            Summary
+          </h4>
+          <p id="guidance-summary"
+            class="text-sm text-gray-600"></p>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- ADMIN TAB                                       -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <div id="pane-admin" class="hidden">
+
+    <!-- Upload rules -->
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+      <h2 class="font-semibold text-gray-800 mb-4">
+        Upload Rules Document
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">
+            Rules document (PDF or DOCX)
+          </label>
+          <input type="file" id="rules-file" accept=".pdf,.docx"
+            class="block w-full text-sm text-gray-600 border
+                   border-gray-300 rounded p-2"/>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">
+              Jurisdiction
+            </label>
+            <input type="text" id="rules-jurisdiction"
+              placeholder="e.g. FINRA"
+              class="block w-full text-sm border border-gray-300
+                     rounded p-2"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">
+              Base rule number
+            </label>
+            <input type="text" id="rules-base-number"
+              placeholder="e.g. 2210"
+              class="block w-full text-sm border border-gray-300
+                     rounded p-2"/>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="uploadRules()"
+            class="bg-blue-600 text-white px-6 py-2 rounded
+                   text-sm font-medium hover:bg-blue-700">
+            Upload and Parse Rules
+          </button>
+          <button onclick="loadCurrentRules()"
+            class="bg-gray-100 text-gray-700 px-6 py-2 rounded
+                   text-sm font-medium hover:bg-gray-200">
+            View Current Rules
+          </button>
+          <button onclick="previewInjection()"
+            class="bg-gray-100 text-gray-700 px-6 py-2 rounded
+                   text-sm font-medium hover:bg-gray-200">
+            Preview Injection
+          </button>
+        </div>
+      </div>
+
+      <!-- Admin loading -->
+      <div id="admin-loading" class="hidden mt-4 text-center">
+        <div class="spinner mx-auto mb-2"></div>
+        <p class="text-gray-500 text-sm">Parsing rules...</p>
+      </div>
+
+      <!-- Upload result -->
+      <div id="upload-result" class="hidden mt-4"></div>
+    </div>
+
+    <!-- Current rules list -->
+    <div id="current-rules-panel" class="hidden">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">
+          Currently Loaded Rules
+        </h3>
+        <span id="rules-meta"
+          class="text-sm text-gray-500"></span>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg
+                  overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left p-3 text-gray-600
+                         font-medium">Rule ID</th>
+              <th class="text-left p-3 text-gray-600
+                         font-medium">Citation</th>
+              <th class="text-left p-3 text-gray-600
+                         font-medium">Severity</th>
+            </tr>
+          </thead>
+          <tbody id="rules-table-body" class="divide-y
+               divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Injection preview -->
+    <div id="injection-preview-panel" class="hidden mt-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-semibold text-gray-800">
+          LLM Injection Preview
+        </h3>
+        <button class="copy-btn"
+          onclick="copyInjection()">Copy</button>
+      </div>
+      <pre id="injection-text"
+        class="text-xs bg-gray-900 text-green-400 p-4 rounded-lg
+               overflow-auto max-h-96 whitespace-pre-wrap"></pre>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// state
+let currentThreadId = null;
+let lastResult = null;
+
+// tabs
+function switchTab(tab) {
+  ['user', 'admin'].forEach(t => {
+    document.getElementById('pane-' + t).classList.toggle(
+      'hidden', t !== tab);
+    document.getElementById('tab-' + t).classList.toggle(
+      'tab-active', t === tab);
+    document.getElementById('tab-' + t).classList.toggle(
+      'text-gray-500', t !== tab);
+  });
+}
+
+// compliance check
+async function checkCompliance() {
+  const file = document.getElementById('post-file').files[0];
+  if (!file) { alert('Please select a file.'); return; }
+
+  const platform = document.getElementById('post-platform').value;
+  setLoading(true, 'Uploading post...');
+  hideResults();
+
+  const fd = new FormData();
+  fd.append('file', file);
+  if (platform) fd.append('platform', platform);
+
+  try {
+    setTimeout(() => setLoadingMsg('Checking compliance...'), 800);
+    setTimeout(() => setLoadingMsg('Verifying citations...'), 3000);
+    setTimeout(() => setLoadingMsg('Generating guidance...'), 6000);
+
+    const resp = await fetch('/ui/upload', {
+      method: 'POST', body: fd
+    });
+    const data = await resp.json();
+    setLoading(false);
+
+    if (data.status === 'hitl_required') {
+      currentThreadId = data.thread_id;
+      renderHITL(data);
+    } else if (data.verdict) {
+      renderReport(data);
+    } else {
+      showError(data.message || 'Unexpected response.');
+    }
+  } catch(e) {
+    setLoading(false);
+    showError('Request failed: ' + e.message);
+  }
+}
+
+// HITL
+async function submitHITL(action) {
+  if (!currentThreadId) return;
+  const notes = document.getElementById('hitl-notes').value;
+  setLoading(true, 'Processing decision...');
+
+  const fd = new FormData();
+  fd.append('thread_id', currentThreadId);
+  fd.append('action', action);
+  fd.append('notes', notes);
+
+  try {
+    const resp = await fetch('/ui/hitl/decision', {
+      method: 'POST', body: fd
+    });
+    const data = await resp.json();
+    setLoading(false);
+    if (data.verdict) {
+      renderReport(data);
+    } else {
+      showError(data.message || 'Decision failed.');
+    }
+  } catch(e) {
+    setLoading(false);
+    showError('Decision failed: ' + e.message);
+  }
+}
+
+// render compliance report
+function renderReport(data) {
+  lastResult = data;
+  document.getElementById('user-results').classList.remove('hidden');
+  document.getElementById('hitl-panel').classList.add('hidden');
+
+  // Verdict banner
+  const banner = document.getElementById('verdict-banner');
+  const vtext  = document.getElementById('verdict-text');
+  const vsub   = document.getElementById('verdict-sub');
+  const score  = document.getElementById('risk-score-display');
+
+  banner.className = 'p-4 rounded-lg flex items-center justify-between ';
+  if (data.verdict === 'compliant') {
+    banner.className += 'verdict-compliant';
+    vtext.textContent = '✓ Compliant';
+    vsub.textContent = 'No violations found. Post is clear to publish.';
+  } else if (data.verdict === 'non_compliant') {
+    banner.className += 'verdict-non-compliant';
+    vtext.textContent = '✗ Non-Compliant';
+    vsub.textContent = `${data.violations.length} violation(s) found. See details below.`;
+  } else {
+    banner.className += 'verdict-needs-review';
+    vtext.textContent = '⚠ Needs Review';
+    vsub.textContent = 'Reviewed by compliance officer.';
+  }
+  score.textContent = (data.risk_score || 0).toFixed(2);
+
+  // Violations
+  const violations = data.violations || [];
+  if (violations.length > 0) {
+    document.getElementById('violations-panel')
+      .classList.remove('hidden');
+    const list = document.getElementById('violations-list');
+    list.innerHTML = violations.map(v => `
+      <div class="bg-white border border-gray-200 rounded-lg p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <span class="font-mono font-bold text-gray-900 text-sm">
+              ${v.rule_id}
+            </span>
+            <span class="ml-2 text-xs px-2 py-0.5 rounded
+                         font-medium badge-${v.severity}">
+              ${v.severity}
+            </span>
+          </div>
+          <span class="text-xs text-gray-400">
+            ${Math.round(v.confidence * 100)}% confidence
+          </span>
+        </div>
+        <p class="text-xs text-gray-500 mb-2">${v.citation_label}</p>
+        <div class="bg-amber-50 border border-amber-200 rounded
+                    p-2 mb-2 text-sm text-amber-900">
+          "${v.violated_text}"
+        </div>
+        <p class="text-sm text-gray-700">${v.explanation}</p>
+        <details class="mt-2">
+          <summary class="text-xs text-blue-600 hover:underline">
+            View full rule text
+          </summary>
+          <p class="text-xs text-gray-500 mt-1 bg-gray-50
+                    rounded p-2 whitespace-pre-wrap">
+            ${v.rule_text}
+          </p>
+        </details>
+      </div>
+    `).join('');
+  }
+
+  // Guidance
+  const guidance = data.guidance || {};
+  if (guidance.compliant_rewrite) {
+    document.getElementById('guidance-panel')
+      .classList.remove('hidden');
+
+    const keepList = document.getElementById('what-to-post');
+    keepList.innerHTML = (guidance.what_to_post || [])
+      .map(item => `<li>${item}</li>`).join('') ||
+      '<li class="text-gray-400">Nothing to keep as-is.</li>';
+
+    const avoidList = document.getElementById('what-to-avoid');
+    avoidList.innerHTML = (guidance.what_to_avoid || [])
+      .map(item => `
+        <li class="flex gap-2">
+          <span class="text-red-600 mt-0.5">✗</span>
+          <div>
+            <span class="font-medium">${item.item}</span>
+            — ${item.reason}
+            <span class="text-xs text-gray-500 block">
+              ${item.rule_citation}
+            </span>
+          </div>
+        </li>
+      `).join('');
+
+    document.getElementById('compliant-rewrite').textContent =
+      guidance.compliant_rewrite;
+    document.getElementById('guidance-summary').textContent =
+      guidance.summary;
+  }
+}
+
+// render HITL
+function renderHITL(data) {
+  document.getElementById('user-results').classList.remove('hidden');
+  document.getElementById('hitl-panel').classList.remove('hidden');
+
+  const payload = data.interrupt_payload || {};
+  const banner = document.getElementById('verdict-banner');
+  banner.className = 'p-4 rounded-lg flex items-center ' +
+    'justify-between verdict-needs-review';
+  document.getElementById('verdict-text').textContent =
+    '⚠ Needs Review';
+  document.getElementById('verdict-sub').textContent =
+    'This post requires compliance officer review.';
+  document.getElementById('risk-score-display').textContent =
+    (payload.risk_score || 0).toFixed(2);
+
+  const violations = payload.violations || [];
+  if (violations.length > 0) {
+    document.getElementById('violations-panel')
+      .classList.remove('hidden');
+    const list = document.getElementById('violations-list');
+    list.innerHTML = violations.map(v => `
+      <div class="bg-white border border-yellow-200
+                  rounded-lg p-4">
+        <span class="font-mono font-bold text-sm">
+          ${v.rule_id}
+        </span>
+        <span class="ml-2 text-xs px-2 py-0.5 rounded
+                     font-medium badge-${v.severity}">
+          ${v.severity}
+        </span>
+        <p class="text-xs text-gray-500 mt-1">
+          ${v.citation_label}
+        </p>
+        <div class="bg-amber-50 rounded p-2 mt-2 text-sm">
+          "${v.violated_text}"
+        </div>
+        <p class="text-sm text-gray-700 mt-1">
+          ${v.explanation}
+        </p>
+      </div>
+    `).join('');
+  }
+}
+
+// admin
+async function uploadRules() {
+  const file = document.getElementById('rules-file').files[0];
+  const jur  = document.getElementById('rules-jurisdiction').value;
+  const base = document.getElementById('rules-base-number').value;
+
+  if (!file || !jur || !base) {
+    alert('File, jurisdiction and base rule number are required.');
+    return;
+  }
+
+  document.getElementById('admin-loading')
+    .classList.remove('hidden');
+  document.getElementById('upload-result')
+    .classList.add('hidden');
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('jurisdiction', jur);
+  fd.append('base_rule_number', base);
+
+  try {
+    const resp = await fetch('/ui/rules/upload', {
+      method: 'POST', body: fd
+    });
+    const data = await resp.json();
+    document.getElementById('admin-loading')
+      .classList.add('hidden');
+
+    const div = document.getElementById('upload-result');
+    div.classList.remove('hidden');
+    if (data.status === 'loaded') {
+      div.className = 'mt-4 p-3 bg-green-50 border ' +
+        'border-green-200 rounded text-sm text-green-800';
+      div.innerHTML = `
+        ✓ Loaded <strong>${data.rule_count}</strong> rules
+        from <strong>${data.source_document}</strong>
+        (${data.jurisdiction}).
+        First 5: ${data.preview.map(r =>
+          `<code>${r.rule_id}</code>`).join(', ')}
+      `;
+    } else {
+      div.className = 'mt-4 p-3 bg-red-50 border ' +
+        'border-red-200 rounded text-sm text-red-800';
+      div.textContent = data.detail || 'Upload failed.';
+    }
+  } catch(e) {
+    document.getElementById('admin-loading')
+      .classList.add('hidden');
+    alert('Upload failed: ' + e.message);
+  }
+}
+
+async function loadCurrentRules() {
+  const resp = await fetch('/rules/current');
+  const data = await resp.json();
+
+  document.getElementById('current-rules-panel')
+    .classList.remove('hidden');
+  document.getElementById('rules-meta').textContent =
+    `${data.rule_count} rules • ` +
+    `loaded ${new Date(data.loaded_at).toLocaleString()}`;
+
+  const tbody = document.getElementById('rules-table-body');
+  tbody.innerHTML = (data.rules || []).map(r => `
+    <tr class="hover:bg-gray-50">
+      <td class="p-3 font-mono text-xs text-gray-900">
+        ${r.rule_id}
+      </td>
+      <td class="p-3 text-xs text-gray-600">
+        ${r.citation_label}
+      </td>
+      <td class="p-3">
+        <span class="text-xs px-2 py-0.5 rounded font-medium
+                     badge-${r.severity}">
+          ${r.severity}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function previewInjection() {
+  const resp = await fetch('/rules/injection-preview');
+  const data = await resp.json();
+
+  document.getElementById('injection-preview-panel')
+    .classList.remove('hidden');
+  document.getElementById('injection-text').textContent =
+    data.injection;
+}
+
+// utilities
+function setLoading(on, msg) {
+  document.getElementById('user-loading')
+    .classList.toggle('hidden', !on);
+  if (msg) setLoadingMsg(msg);
+}
+function setLoadingMsg(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+}
+function hideResults() {
+  ['user-results', 'violations-panel', 'guidance-panel',
+   'hitl-panel'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+}
+function showError(msg) {
+  document.getElementById('user-results')
+    .classList.remove('hidden');
+  document.getElementById('verdict-banner').className =
+    'p-4 rounded-lg verdict-non-compliant';
+  document.getElementById('verdict-text').textContent = 'Error';
+  document.getElementById('verdict-sub').textContent = msg;
+  document.getElementById('risk-score-display').textContent = '';
+}
+function copyRewrite() {
+  const text = document.getElementById('compliant-rewrite')
+    .textContent;
+  navigator.clipboard.writeText(text);
+}
+function copyInjection() {
+  const text = document.getElementById('injection-text')
+    .textContent;
+  navigator.clipboard.writeText(text);
+}
+</script>
+
+</body>
+</html>

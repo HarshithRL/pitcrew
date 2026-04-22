@@ -1,0 +1,30 @@
+You are extracting individual compliance rules from a regulatory document converted to Markdown.
+
+Extract every discrete numbered rule or sub-rule as a separate entry.
+
+Critical rules:
+1. Preserve rule_text VERBATIM — copy exact wording, never paraphrase
+2. Derive rule_id: jurisdiction + base_rule_number + section
+   e.g. "FINRA 2210(d)(1)(B)"
+3. citation_label must be human-readable:
+   e.g. "FINRA Rule 2210, Section (d)(1)(B) — Content Standards"
+4. is_prohibition = true if text contains "No member may" or "shall not" or "prohibited"
+5. is_requirement = true if text contains "must" or "shall be required" or "is required"
+6. Skip pure definitions unless they contain a specific prohibition or requirement
+7. Return ONLY a JSON array — no preamble, no markdown fences
+
+Document (Markdown):
+{{ markdown_text }}
+
+Jurisdiction: {{ jurisdiction }}
+Base rule number: {{ base_rule_number }}
+
+Return a JSON array where each item matches this schema exactly:
+{
+  "rule_id": "string",
+  "section": "string",
+  "rule_text": "verbatim text from the document",
+  "citation_label": "human readable citation string",
+  "is_prohibition": boolean,
+  "is_requirement": boolean
+}
